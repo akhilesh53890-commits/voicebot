@@ -4,51 +4,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Healthcare Symptom Checker</title>
+    <title>Alethra</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
-    <div class="container">
-        <header>
-            <h1><span class="highlight">Health</span>Voice Assistant</h1>
-            <p>Describe your symptoms, and I'll help you.</p>
+    <div class="app-container">
+        <!-- Header with EKG Animation -->
+        <header class="main-header">
+            <div class="logo-container">
+                <div class="doctor-avatar">
+                    <img src="{{ url_for('static', filename='alethra_logo.png') }}" alt="Alethra AI"
+                        onerror="this.src='https://cdn-icons-png.flaticon.com/512/3774/3774299.png'">
+                    <div class="pulse-ring"></div>
+                </div>
+                <div class="title-container">
+                    <h1>Alethra</h1>
+                    <div class="ekg-line">
+                        <svg viewBox="0 0 500 100" class="ekg-svg">
+                            <polyline
+                                points="0,50 100,50 120,20 140,80 160,50 200,50 220,10 240,90 260,50 350,50 370,20 390,80 410,50 500,50" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
         </header>
 
-        <main>
-            <div id="chat-history" class="chat-history">
-                <div class="message bot-message">
-                    Hello! I am your healthcare assistant. Please tap the microphone and describe your symptoms.
+        <!-- Main Chat Area -->
+        <main class="chat-area" id="chat-history">
+            <div class="message bot-message welcome-card">
+                <div class="message-content">
+                    <i class="fa-solid fa-user-doctor doctor-icon"></i>
+                    <p>Hello! I am Alethra, your AI Medical Assistant. Describe your symptoms, and I will analyze them
+                        for you.</p>
                 </div>
-            </div>
-
-            <div class="controls">
-                <div class="button-group">
-                    <button id="mic-btn" class="mic-btn" title="Speak">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                            <line x1="12" y1="19" x2="12" y2="23"></line>
-                            <line x1="8" y1="23" x2="16" y2="23"></line>
-                        </svg>
-                    </button>
-                    <button id="stop-btn" class="stop-btn" title="Stop Voice">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="6" y="4" width="4" height="16"></rect>
-                            <rect x="14" y="4" width="4" height="16"></rect>
-                        </svg>
-                    </button>
-                </div>
-                <div id="status" class="status">Tap to speak</div>
             </div>
         </main>
+
+        <!-- Typing Indicator (Hidden by default) -->
+        <div id="typing-indicator" class="typing-indicator hidden">
+            <span>Alethra is analyzing...</span>
+            <div class="dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <footer class="input-area">
+            <div class="input-wrapper">
+                <button id="mic-btn" class="mic-btn" title="Speak Symptoms">
+                    <i class="fa-solid fa-microphone"></i>
+                    <div class="mic-waves"></div>
+                </button>
+
+                <input type="text" id="text-input" placeholder="Type your symptoms here..." autocomplete="off">
+
+                <button id="send-btn" class="send-btn" title="Send">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+
+                <button id="stop-btn" class="stop-btn" title="Stop Voice">
+                    <i class="fa-solid fa-stop"></i>
+                </button>
+            </div>
+            <p class="safety-warning">⚠️ This is an AI-generated medical assistant. Always consult a real doctor for
+                medical emergencies.</p>
+        </footer>
+
+        <!-- Floating Emergency Button -->
+        <div class="emergency-fab-container">
+            <div id="emergency-menu" class="emergency-menu hidden">
+                <a href="tel:112" class="emergency-item"><i class="fa-solid fa-phone"></i> Call 112 (General)</a>
+                <a href="tel:911" class="emergency-item"><i class="fa-solid fa-ambulance"></i> Call 911 (Emergency)</a>
+            </div>
+            <button id="emergency-btn" class="emergency-fab" title="Emergency Contacts">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
     </div>
 
+    <script src="{{ url_for('static', filename='medical_logic.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 
