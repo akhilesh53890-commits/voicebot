@@ -1,7 +1,9 @@
 const micBtn = document.getElementById('mic-btn');
 const stopBtn = document.getElementById('stop-btn');
-const statusText = document.getElementById('status');
+const sendBtn = document.getElementById('send-btn');
+const textInput = document.getElementById('text-input');
 const chatHistory = document.getElementById('chat-history');
+const typingIndicator = document.getElementById('typing-indicator');
 
 // Check browser support
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -19,78 +21,139 @@ recognition.interimResults = false;
 let isBookingMode = false;
 let lastCondition = null;
 
+// --- Event Listeners ---
+
 micBtn.addEventListener('click', () => {
     recognition.start();
     micBtn.classList.add('listening');
-    statusText.textContent = "Listening...";
+    textInput.placeholder = "Listening...";
 });
 
 stopBtn.addEventListener('click', () => {
-    SpeechSynthesis.cancel(); // Stop speaking
-    statusText.textContent = "Voice stopped.";
-    setTimeout(() => {
-        statusText.textContent = "Tap to speak";
-    }, 2000);
+    SpeechSynthesis.cancel();
+    micBtn.classList.remove('listening');
+    textInput.placeholder = "Type your symptoms here...";
 });
+
+sendBtn.addEventListener('click', () => {
+    const text = textInput.value.trim();
+    if (text) {
+        processUserInput(text);
+        textInput.value = '';
+    }
+});
+
+textInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const text = textInput.value.trim();
+        if (text) {
+            processUserInput(text);
+            textInput.value = '';
+        }
+    }
+});
+
+// --- Speech Recognition ---
 
 recognition.onresult = (event) => {
     const text = event.results[0][0].transcript;
+    processUserInput(text);
+};
+
+recognition.onend = () => {
+    micBtn.classList.remove('listening');
+    textInput.placeholder = "Type your symptoms here...";
+};
+
+recognition.onerror = (event) => {
+    micBtn.classList.remove('listening');
+    textInput.placeholder = "Error. Try again.";
+    console.error(event.error);
+};
+
+// --- Logic & UI ---
+
+function processUserInput(text) {
     addMessage(text, 'user-message');
 
     if (isBookingMode) {
         handleBookingResponse(text);
     } else {
-        sendToBackend(text);
+        showTyping();
+        // Simulate analysis delay for effect
+        setTimeout(() => {
+            sendToBackend(text);
+        }, 1000);
     }
-};
+}
 
-recognition.onend = () => {
-    micBtn.classList.remove('listening');
-    statusText.textContent = "Tap to speak";
-};
+function showTyping() {
+    typingIndicator.classList.remove('hidden');
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
 
-recognition.onerror = (event) => {
-    micBtn.classList.remove('listening');
-    statusText.textContent = "Error occurred: " + event.error;
-};
+function hideTyping() {
+    typingIndicator.classList.add('hidden');
+}
 
 function addMessage(text, className) {
     const div = document.createElement('div');
     div.classList.add('message', className);
 
-    // Parse simple markdown (bolding and newlines) for display
-    let formattedText = text
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // Bold
-        .replace(/\n/g, '<br>'); // Newlines
+    // Check if it's a bot message with complex content (detected by HTML tags or newlines)
+    if (className === 'bot-message' && (text.includes('**') || text.includes('\n'))) {
+        div.innerHTML = formatBotResponse(text);
+    } else {
+        div.textContent = text;
+    }
 
-    div.innerHTML = formattedText;
     chatHistory.appendChild(div);
     chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
+function formatBotResponse(text) {
+    // Convert the markdown-like string into a nice HTML structure
+    // This is a simple parser tailored to the specific output format of medical_logic.js
+
+    let html = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+
+    // Wrap sections in cards if possible (simple heuristic)
+    if (html.includes('1. Detected Symptoms')) {
+        html = html.replace('<strong>1. Detected Symptoms</strong>', '<div class="result-section"><h3>Detected Symptoms</h3>');
+        html = html.replace('<strong>2. Possible Conditions', '</div><div class="result-section"><h3>Possible Conditions');
+        html = html.replace('<strong>3. Safe OTC Medicines', '</div><div class="result-section"><h3>Safe OTC Medicines</h3>');
+        html = html.replace('<strong>4. First-Aid Advice', '</div><div class="result-section"><h3>First-Aid Advice</h3>');
+        html = html.replace('<strong>5. When to See a Real Doctor', '</div><div class="result-section"><h3>When to See a Doctor</h3>');
+        html = html.replace('⚠️', '</div><div class="result-section emergency-alert"><i class="fa-solid fa-triangle-exclamation"></i> ');
+
+        // Wrap the whole thing in a container if needed, but the message div acts as one.
+    }
+
+    return html;
+}
+
 function speak(text) {
-    // Strip markdown characters for speech
     const cleanText = text.replace(/\*\*/g, '').replace(/⚠️/g, 'Warning:').replace(/🚨/g, 'Alert:');
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.volume = 0.5; // Decrease volume (0.0 to 1.0)
+    utterance.volume = 0.5;
     SpeechSynthesis.speak(utterance);
 }
 
 async function sendToBackend(text) {
-    statusText.textContent = "Processing...";
-
     try {
         // Local Logic Processing
         const symptoms = extractSymptoms(text);
         const responseText = getMedicalAdvice(symptoms);
 
+        hideTyping();
         addMessage(responseText, 'bot-message');
         speak(responseText);
 
-        // Check if we should prompt for booking
         if (symptoms.length > 0 && !responseText.includes("EMERGENCY DETECTED")) {
             isBookingMode = true;
-            lastCondition = "Consultation"; // Generic
+            lastCondition = "Consultation";
 
             setTimeout(() => {
                 const followUp = "Would you like me to book an appointment with a doctor?";
@@ -100,26 +163,20 @@ async function sendToBackend(text) {
         }
 
     } catch (error) {
+        hideTyping();
         console.error('Error:', error);
         addMessage("Sorry, I encountered an error processing your request.", 'bot-message');
         speak("Sorry, I encountered an error processing your request.");
     }
-
-    statusText.textContent = "Tap to speak";
 }
 
 async function handleBookingResponse(text) {
-    isBookingMode = false; // Reset mode
+    isBookingMode = false;
 
     if (text.toLowerCase().includes('yes')) {
-        try {
-            const bookingInfo = bookAppointment(lastCondition);
-            addMessage(bookingInfo, 'bot-message');
-            speak(bookingInfo);
-
-        } catch (error) {
-            console.error('Error:', error);
-        }
+        const bookingInfo = bookAppointment(lastCondition);
+        addMessage(bookingInfo, 'bot-message');
+        speak(bookingInfo);
     } else {
         const msg = "Okay, take care and get well soon!";
         addMessage(msg, 'bot-message');
