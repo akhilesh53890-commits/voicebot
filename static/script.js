@@ -80,34 +80,29 @@ async function sendToBackend(text) {
     statusText.textContent = "Processing...";
 
     try {
-        const response = await fetch('/api/process', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text: text })
-        });
+        // Local Logic Processing
+        const symptoms = extractSymptoms(text);
+        const responseText = getMedicalAdvice(symptoms);
 
-        const data = await response.json();
-        addMessage(data.response_text, 'bot-message');
-        speak(data.response_text);
+        addMessage(responseText, 'bot-message');
+        speak(responseText);
 
-        if (data.booking_prompt) {
+        // Check if we should prompt for booking
+        if (symptoms.length > 0 && !responseText.includes("EMERGENCY DETECTED")) {
             isBookingMode = true;
-            // We don't have 'condition' explicitly anymore in the main response, 
-            // but we can infer or just pass a generic term if needed for booking.
-            // For now, let's just ask.
+            lastCondition = "Consultation"; // Generic
+
             setTimeout(() => {
                 const followUp = "Would you like me to book an appointment with a doctor?";
                 addMessage(followUp, 'bot-message');
                 speak(followUp);
-            }, 5000); // Wait a bit before asking
+            }, 5000);
         }
 
     } catch (error) {
         console.error('Error:', error);
-        addMessage("Sorry, I encountered an error connecting to the server.", 'bot-message');
-        speak("Sorry, I encountered an error connecting to the server.");
+        addMessage("Sorry, I encountered an error processing your request.", 'bot-message');
+        speak("Sorry, I encountered an error processing your request.");
     }
 
     statusText.textContent = "Tap to speak";
@@ -118,15 +113,9 @@ async function handleBookingResponse(text) {
 
     if (text.toLowerCase().includes('yes')) {
         try {
-            const response = await fetch('/api/book', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ condition: "Consultation" }) // Generic condition
-            });
-
-            const data = await response.json();
-            addMessage(data.response_text, 'bot-message');
-            speak(data.response_text);
+            const bookingInfo = bookAppointment(lastCondition);
+            addMessage(bookingInfo, 'bot-message');
+            speak(bookingInfo);
 
         } catch (error) {
             console.error('Error:', error);
