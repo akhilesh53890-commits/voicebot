@@ -1,0 +1,4 @@
+Flask
+spacy
+SpeechRecognition
+pyttsx3
