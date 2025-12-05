@@ -4,6 +4,8 @@ const sendBtn = document.getElementById('send-btn');
 const textInput = document.getElementById('text-input');
 const chatHistory = document.getElementById('chat-history');
 const typingIndicator = document.getElementById('typing-indicator');
+const emergencyBtn = document.getElementById('emergency-btn');
+const emergencyMenu = document.getElementById('emergency-menu');
 
 // Check browser support
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -50,6 +52,17 @@ textInput.addEventListener('keypress', (e) => {
             processUserInput(text);
             textInput.value = '';
         }
+    }
+});
+
+emergencyBtn.addEventListener('click', () => {
+    emergencyMenu.classList.toggle('hidden');
+});
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!emergencyBtn.contains(e.target) && !emergencyMenu.contains(e.target)) {
+        emergencyMenu.classList.add('hidden');
     }
 });
 
@@ -174,9 +187,15 @@ async function handleBookingResponse(text) {
     isBookingMode = false;
 
     if (text.toLowerCase().includes('yes')) {
-        const bookingInfo = bookAppointment(lastCondition);
-        addMessage(bookingInfo, 'bot-message');
-        speak(bookingInfo);
+        const msg = "Opening Google Maps to find the nearest hospitals for you.";
+        addMessage(msg, 'bot-message');
+        speak(msg);
+
+        // Redirect to Google Maps
+        setTimeout(() => {
+            window.open('https://www.google.com/maps/search/hospitals+near+me', '_blank');
+        }, 1500);
+
     } else {
         const msg = "Okay, take care and get well soon!";
         addMessage(msg, 'bot-message');
